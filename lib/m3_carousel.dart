@@ -1,15 +1,42 @@
 library m3_carousel;
 
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-class M3Carousel extends StatefulWidget {
+extension ListX on List {
+  safeGet(int index) {
+    if (index < 0 || index >= length) {
+      return null;
+    }
+    return this[index];
+  }
+}
 
+class M3CarouselChildData {
+  String? image;
+  String? title;
+  double width;
+  double marginRight;
+  double direction;
+  double opacity;
+
+  M3CarouselChildData({
+    this.image,
+    this.title,
+    this.width = 0,
+    this.marginRight = 0,
+    this.direction = 0,
+    this.opacity = 0,
+  });
+}
+
+class M3Carousel extends StatefulWidget {
   final double? width;
   final double? height;
   final int visible;
-  final List<Map> children;
+  final List<M3CarouselChildData> children;
   final void Function(int)? childClick;
   final double trailingChildWidth;
   final double borderRadius;
@@ -31,88 +58,103 @@ class M3Carousel extends StatefulWidget {
     this.trailingChildWidth = 50,
     this.spacing = 10.0,
     this.autoSlide = false,
-    this.autoPlayDelay = 5000,
-    this.slideAnimationDuration = 800,
-    this.titleFadeAnimationDuration = 500,
+    this.autoPlayDelay = 1000,
+    this.slideAnimationDuration = 300,
+    this.titleFadeAnimationDuration = 300,
     this.titleTextSize = 16,
   });
 
   @override
   State<M3Carousel> createState() => _M3CarouselState();
 }
-class _M3CarouselState extends State<M3Carousel> {
 
+class _M3CarouselState extends State<M3Carousel> {
   late double useWidth;
   late double useHeight;
-  List<Map> builtChildren = [];
+  List<M3CarouselChildData> builtChildren = [];
   int activeIndex = 0;
   Timer? runner;
   bool isDragging = false;
 
-  void updateSlabs(bool isInit, int direction) { // [0 = subtract, 1 = add]
+  // Visible item alway is 3
+  // rate is 4 2 1
+
+  void updateSlabs(bool isInit, int direction) {
+    // [0 = subtract, 1 = add]
     if (builtChildren.length == 1) {
-      setState(() { builtChildren[0]['width'] = useWidth; });
+      setState(() {
+        builtChildren[0].width = useWidth;
+      });
       return;
     }
     if (builtChildren.length == widget.visible) {
       for (int a = 0; a < builtChildren.length; a++) {
-        double cal1 = useWidth - (widget.trailingChildWidth + (widget.spacing * (builtChildren.length - 1)));
-        builtChildren[a]['width'] = a == (builtChildren.length - 1)
-            ? widget.trailingChildWidth : cal1 / (builtChildren.length - 1);
-        builtChildren[a]['marginRight'] = a == (builtChildren.length - 1) ? 0 : widget.spacing;
-        builtChildren[a]['opacity'] = a == (builtChildren.length - 1) ? 0.0 : 1.0;
+        double cal1 = useWidth -
+            (widget.trailingChildWidth +
+                (widget.spacing * (builtChildren.length - 1)));
+        builtChildren[a].width = a == (builtChildren.length - 1)
+            ? widget.trailingChildWidth
+            : cal1 / (builtChildren.length - 1);
+        builtChildren[a].marginRight =
+            a == (builtChildren.length - 1) ? 0 : widget.spacing;
+        builtChildren[a].opacity = a == (builtChildren.length - 1) ? 0.0 : 1.0;
       }
       return setState(() {});
     }
     for (int a = 0; a < builtChildren.length; a++) {
-      builtChildren[a]['width'] = 0.0;
-      builtChildren[a]['marginRight'] = 0.0;
-      builtChildren[a]['opacity'] = 0.0;
+      builtChildren[a].width = 0.0;
+      builtChildren[a].marginRight = 0.0;
+      builtChildren[a].opacity = 0.0;
     }
-    if (activeIndex == ((builtChildren.length) - widget.visible)) {
-      for (int a = 0; a < widget.visible; a++) {
-        double cal1 = useWidth - (widget.trailingChildWidth + (widget.spacing * (widget.visible - 1)));
-        builtChildren[activeIndex + a]['width'] = a == 0
-            ? widget.trailingChildWidth : cal1 / (widget.visible - 1);
-        builtChildren[activeIndex + a]['marginRight'] = a == (widget.visible - 1) ? 0 : widget.spacing;
-        builtChildren[activeIndex + a]['opacity'] = a == 0 ? 0.0 : 1.0;
-        builtChildren[activeIndex + a]['direction'] = 0;
+
+    for (int a = 0; a < widget.visible; a++) {
+      double cal1 = useWidth - ((widget.spacing * (widget.visible - 1)));
+
+      final oneCell = cal1 / (pow(2, widget.visible) - 1);
+
+      if (a < widget.visible) {
+        builtChildren[activeIndex + a].width =
+            oneCell * pow(2, widget.visible - 1 - a);
       }
-    } else {
-      for (int a = 0; a < widget.visible; a++) {
-        double cal1 = useWidth - (widget.trailingChildWidth + (widget.spacing * (widget.visible - 1)));
-        builtChildren[activeIndex + a]['width'] = a == (widget.visible - 1)
-            ? widget.trailingChildWidth : cal1 / (widget.visible - 1);
-        builtChildren[activeIndex + a]['marginRight'] = a == (widget.visible - 1) ? 0 : widget.spacing;
-        builtChildren[activeIndex + a]['opacity'] = a == (widget.visible - 1) ? 0.0 : 1.0;
-        builtChildren[activeIndex + a]['direction'] = a == (widget.visible - 1) ? 1 : 0;
-      }
+
+      builtChildren[activeIndex + a].marginRight =
+          a == (widget.visible - 1) ? 0 : widget.spacing;
+      builtChildren[activeIndex + a].opacity =
+          a == (widget.visible - 1) ? 0.0 : 1.0;
+      builtChildren[activeIndex + a].direction =
+          a == (widget.visible - 1) ? 1 : 0;
     }
+
     return setState(() {});
   }
 
   @override
   void initState() {
     super.initState();
-    for (int a = 0; a < widget.children.length; a++) {
-      builtChildren.add({
-        "width": 0.0,
-        "marginRight": 0.0,
-        "opacity": 0.0,
-        "direction": 0,
-        "childData": widget.children[a],
-      });
+    for (int a = 0; a < widget.children.length + 2; a++) {
+      builtChildren.add(M3CarouselChildData());
+      if (a < widget.children.length) {
+        builtChildren[a].image = widget.children[a].image;
+        builtChildren[a].title = widget.children[a].title;
+      }
     }
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       updateSlabs(true, 0);
       if (widget.autoSlide) {
-        runner = Timer.periodic(Duration(milliseconds: widget.autoPlayDelay,), (timer) {
+        runner = Timer.periodic(
+            Duration(
+              milliseconds: widget.autoPlayDelay,
+            ), (timer) {
           if (isDragging) return;
-          if ((builtChildren.length < 2) || (builtChildren.length == widget.visible)) return;
+          // if ((builtChildren.length < 2) ||
+          //     (builtChildren.length == widget.visible)) return;
           if ((activeIndex + 1) <= ((builtChildren.length) - widget.visible)) {
-            activeIndex++; updateSlabs(false, 1);
+            activeIndex++;
+            updateSlabs(false, 1);
           } else {
-            activeIndex = 0; updateSlabs(false, 1);
+            activeIndex = 0;
+            updateSlabs(false, 1);
           }
         });
       }
@@ -121,7 +163,9 @@ class _M3CarouselState extends State<M3Carousel> {
 
   @override
   void dispose() {
-    if (runner != null) { runner?.cancel(); }
+    if (runner != null) {
+      runner?.cancel();
+    }
     super.dispose();
   }
 
@@ -130,100 +174,141 @@ class _M3CarouselState extends State<M3Carousel> {
     return LayoutBuilder(
       builder: (BuildContext ctx, BoxConstraints constraints) {
         useWidth = widget.width == null ? constraints.maxWidth : widget.width!;
-        useHeight = widget.height == null ? constraints.maxHeight : widget.height!;
+        useHeight =
+            widget.height == null ? constraints.maxHeight : widget.height!;
         return GestureDetector(
           onHorizontalDragStart: (details) {
             isDragging = true;
           },
-          onHorizontalDragEnd: (DragEndDetails details) { isDragging = false;
-          if (details.primaryVelocity! > (kIsWeb ? 0 : 300)) { // print("swipe left");
-            if ((builtChildren.length < 2) || (builtChildren.length == widget.visible)) return;
-            if ((activeIndex != 0) && ((activeIndex - 1) > -1)) {
-              activeIndex--; updateSlabs(false, 0);
+          onHorizontalDragEnd: (DragEndDetails details) {
+            isDragging = false;
+            if (details.primaryVelocity! > (kIsWeb ? 0 : 300)) {
+              // print("swipe left");
+              if ((builtChildren.length < 2) ||
+                  (builtChildren.length == widget.visible)) return;
+              if ((activeIndex != 0) && ((activeIndex - 1) > -1)) {
+                activeIndex--;
+                updateSlabs(false, 0);
+              }
+            } else if (details.primaryVelocity! < -(kIsWeb ? 0 : 300)) {
+              // print("swipe right");
+              if ((builtChildren.length < 2) ||
+                  (builtChildren.length == widget.visible)) return;
+              if ((activeIndex + 1) <=
+                  ((builtChildren.length) - widget.visible)) {
+                activeIndex++;
+                updateSlabs(false, 1);
+              }
             }
-          } else
-          if (details.primaryVelocity! < -(kIsWeb ? 0 : 300)) { // print("swipe right");
-            if ((builtChildren.length < 2) || (builtChildren.length == widget.visible)) return;
-            if ((activeIndex + 1) <= ((builtChildren.length) - widget.visible)) {
-              activeIndex++; updateSlabs(false, 1);
-            }
-          }
           },
           child: SizedBox(
             width: useWidth,
             height: useHeight,
             child: Row(
-              children: builtChildren.asMap().entries.map<Widget>(
-                (listItem) => InkWell(
-                  onTap: widget.childClick == null ? null : () {
-                    if (listItem.value['width'] == widget.trailingChildWidth) {
-                      if (listItem.value['direction'] == 1) {
-                        activeIndex++; updateSlabs(false, 1);
-                      } else {
-                        activeIndex--; updateSlabs(false, 0);
-                      }
-                      return;
-                    }
-                    widget.childClick!(listItem.key);
-                  },
-                  splashFactory: NoSplash.splashFactory,
-                  hoverColor: Colors.transparent,
-                  focusColor: Colors.transparent,
-                  child: Container(
-                    margin: EdgeInsets.only(
-                      right: double.parse(listItem.value['marginRight'].toString()),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.all(Radius.circular(widget.borderRadius)),
-                      child: AnimatedContainer(
-                        duration: Duration(milliseconds: widget.slideAnimationDuration,),
-                        width: double.parse(listItem.value['width'].toString()),
-                        height: useHeight,
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            Image.asset(
-                              listItem.value['childData']['image'],
-                              fit: BoxFit.cover,
-                              width: double.maxFinite, height: double.maxFinite,
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
-                              decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [ Colors.transparent, Colors.black.withOpacity(0.5) ],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                  )
+              children: builtChildren
+                  .map<Widget>((listItem) => InkWell(
+                        onTap: widget.childClick == null
+                            ? null
+                            : () {
+                                if (listItem.width ==
+                                    widget.trailingChildWidth) {
+                                  if (listItem.direction == 1) {
+                                    activeIndex++;
+                                    updateSlabs(false, 1);
+                                  } else {
+                                    activeIndex--;
+                                    updateSlabs(false, 0);
+                                  }
+                                  return;
+                                }
+                                widget.childClick!(
+                                    builtChildren.indexOf(listItem));
+                              },
+                        splashFactory: NoSplash.splashFactory,
+                        hoverColor: Colors.transparent,
+                        focusColor: Colors.transparent,
+                        child: Container(
+                          margin: EdgeInsets.only(
+                            right:
+                                double.parse(listItem.marginRight.toString()),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.all(
+                                Radius.circular(widget.borderRadius)),
+                            child: AnimatedContainer(
+                              duration: Duration(
+                                milliseconds: widget.slideAnimationDuration,
                               ),
-                              child: Align(
-                                alignment: Alignment.bottomCenter,
-                                child: AnimatedOpacity(
-                                  opacity: double.parse(listItem.value['opacity'].toString()),
-                                  duration: Duration(milliseconds: widget.titleFadeAnimationDuration,),
-                                  child: Text(
-                                    listItem.value['childData']['title'],
-                                    style: TextStyle(
-                                      fontSize: widget.titleTextSize, color: Colors.white,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.clip,
-                                  ),
-                                ),
+                              width: listItem.width,
+                              height: useHeight,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  buildMainChild(listItem),
+                                  buildTitle(listItem),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    ),
-                  ),
-                )
-              ).toList(),
+                      ))
+                  .toList(),
             ),
           ),
         );
       },
+    );
+  }
+
+  Container buildTitle(M3CarouselChildData listItem) {
+    final text = listItem.title;
+    if (text == null) {
+      return Container();
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+      decoration: BoxDecoration(
+          gradient: LinearGradient(
+        colors: [Colors.transparent, Colors.black.withOpacity(0.5)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      )),
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: AnimatedOpacity(
+          opacity: listItem.opacity,
+          duration: Duration(
+            milliseconds: widget.titleFadeAnimationDuration,
+          ),
+          child: Text(
+            listItem.title ?? '',
+            style: TextStyle(
+              fontSize: widget.titleTextSize,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.clip,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildMainChild(M3CarouselChildData listItem) {
+    final imageURl = listItem.image;
+    if (imageURl == null) {
+      return Container(
+        color: Colors.transparent,
+        width: double.maxFinite,
+        height: double.maxFinite,
+      );
+    }
+    return Image.asset(
+      imageURl,
+      fit: BoxFit.cover,
+      width: double.maxFinite,
+      height: double.maxFinite,
     );
   }
 }
