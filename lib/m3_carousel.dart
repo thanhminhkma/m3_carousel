@@ -244,14 +244,13 @@ class _M3CarouselState extends State<M3Carousel> {
                               ),
                               width: listItem.width,
                               height: useHeight,
-                              child: listItem.child ??
-                                  Stack(
-                                    fit: StackFit.expand,
-                                    children: [
-                                      buildMainChild(listItem),
-                                      buildTitle(listItem),
-                                    ],
-                                  ),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  listItem.child ?? buildMainChild(listItem),
+                                  buildTitle(listItem),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -264,9 +263,13 @@ class _M3CarouselState extends State<M3Carousel> {
     );
   }
 
-  Container buildTitle(M3CarouselChildData listItem) {
+  Widget buildTitle(M3CarouselChildData listItem) {
     final text = listItem.title;
     if (text == null) {
+      return Container();
+    }
+    final show = builtChildren.indexOf(listItem) == activeIndex;
+    if (!show) {
       return Container();
     }
     return Container(
