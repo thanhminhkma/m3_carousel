@@ -41,10 +41,23 @@ class MyApp extends StatelessWidget {
               .map((e) => M3CarouselChildData(
                     image: e["image"],
                     title: e["title"],
+                    child: buildMainChild(e["image"]),
                   ))
               .toList(),
         ),
       ),
+    );
+  }
+
+  Widget? buildMainChild(String? imageURL) {
+    if (imageURL == null) {
+      return null;
+    }
+    return Image.asset(
+      imageURL,
+      fit: BoxFit.cover,
+      width: double.maxFinite,
+      height: double.maxFinite,
     );
   }
 }

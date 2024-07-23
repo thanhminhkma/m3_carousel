@@ -138,6 +138,7 @@ class _M3CarouselState extends State<M3Carousel> {
       if (a < widget.children.length) {
         builtChildren[a].image = widget.children[a].image;
         builtChildren[a].title = widget.children[a].title;
+        builtChildren[a].child = widget.children[a].child;
       }
     }
 
