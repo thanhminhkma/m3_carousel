@@ -17,6 +17,7 @@ extension ListX on List {
 class M3CarouselChildData {
   String? image;
   String? title;
+  Widget? child;
   double width;
   double marginRight;
   double direction;
@@ -29,6 +30,7 @@ class M3CarouselChildData {
     this.marginRight = 0,
     this.direction = 0,
     this.opacity = 0,
+    this.child,
   });
 }
 
@@ -241,13 +243,14 @@ class _M3CarouselState extends State<M3Carousel> {
                               ),
                               width: listItem.width,
                               height: useHeight,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  buildMainChild(listItem),
-                                  buildTitle(listItem),
-                                ],
-                              ),
+                              child: listItem.child ??
+                                  Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      buildMainChild(listItem),
+                                      buildTitle(listItem),
+                                    ],
+                                  ),
                             ),
                           ),
                         ),
