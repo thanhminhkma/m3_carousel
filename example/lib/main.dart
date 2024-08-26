@@ -37,11 +37,45 @@ class MyApp extends StatelessWidget {
           childClick: (int index) {
             print("Clicked $index");
           },
+          totalSubCount: images.length * 200,
+          initIndex: images.length * 100,
+          titleBuilder: (context, index, activeIndex) {
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                colors: [Colors.transparent, Colors.black.withOpacity(0.5)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )),
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: AnimatedOpacity(
+                  opacity: index == activeIndex ? 1 : 0,
+                  duration: const Duration(
+                    milliseconds: 300,
+                  ),
+                  child: Text(
+                    images[index % images.length]["title"] ?? 'abc',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.clip,
+                  ),
+                ),
+              ),
+            );
+          },
+          itemBuilder: (context, index) {
+            return buildMainChild(images[index % images.length]["image"]);
+          },
           children: images
               .map((e) => M3CarouselChildData(
                     image: e["image"],
                     title: e["title"],
-                    child: buildMainChild(e["image"]),
                   ))
               .toList(),
         ),

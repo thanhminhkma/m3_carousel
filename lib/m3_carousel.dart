@@ -17,7 +17,6 @@ extension ListX on List {
 class M3CarouselChildData {
   String? image;
   String? title;
-  Widget? child;
   double width;
   double marginRight;
   double direction;
@@ -30,9 +29,11 @@ class M3CarouselChildData {
     this.marginRight = 0,
     this.direction = 0,
     this.opacity = 0,
-    this.child,
   });
 }
+
+typedef NullableTitleBuilder = Widget? Function(
+    BuildContext context, int index, int activeIndex);
 
 class M3Carousel extends StatefulWidget {
   final double? width;
@@ -46,8 +47,15 @@ class M3Carousel extends StatefulWidget {
   final bool autoSlide;
   final int autoPlayDelay;
   final int slideAnimationDuration;
+  final int threasold;
   final int titleFadeAnimationDuration;
   final double titleTextSize;
+
+  final NullableIndexedWidgetBuilder? itemBuilder;
+  final NullableTitleBuilder? titleBuilder;
+
+  final int totalSubCount;
+  final int? initIndex;
 
   const M3Carousel({
     super.key,
@@ -64,6 +72,11 @@ class M3Carousel extends StatefulWidget {
     this.slideAnimationDuration = 300,
     this.titleFadeAnimationDuration = 300,
     this.titleTextSize = 16,
+    this.itemBuilder,
+    this.titleBuilder,
+    required this.totalSubCount,
+    this.initIndex,
+    this.threasold = 500,
   });
 
   @override
@@ -77,6 +90,22 @@ class _M3CarouselState extends State<M3Carousel> {
   int activeIndex = 0;
   Timer? runner;
   bool isDragging = false;
+
+  DateTime? lastTimeAnimate;
+
+  bool get checkCanAnimate {
+    if (lastTimeAnimate == null) {
+      lastTimeAnimate = DateTime.now();
+      return true;
+    }
+    final now = DateTime.now();
+    final diff = now.difference(lastTimeAnimate!);
+    if (diff.inMilliseconds > widget.threasold) {
+      lastTimeAnimate = now;
+      return true;
+    }
+    return false;
+  }
 
   // Visible item alway is 3
   // rate is 4 2 1
@@ -133,14 +162,16 @@ class _M3CarouselState extends State<M3Carousel> {
   @override
   void initState() {
     super.initState();
-    for (int a = 0; a < widget.children.length + 2; a++) {
+    final dataCount = widget.children.length;
+    for (int a = 0; a < widget.totalSubCount; a++) {
       builtChildren.add(M3CarouselChildData());
       if (a < widget.children.length) {
-        builtChildren[a].image = widget.children[a].image;
-        builtChildren[a].title = widget.children[a].title;
-        builtChildren[a].child = widget.children[a].child;
+        builtChildren[a].image = widget.children[a % dataCount].image;
+        builtChildren[a].title = widget.children[a % dataCount].title;
       }
     }
+
+    activeIndex = widget.initIndex ?? 0;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       updateSlabs(true, 0);
@@ -185,6 +216,7 @@ class _M3CarouselState extends State<M3Carousel> {
           },
           onHorizontalDragEnd: (DragEndDetails details) {
             isDragging = false;
+            if (!checkCanAnimate) return;
             if (details.primaryVelocity! > (kIsWeb ? 0 : 300)) {
               // print("swipe left");
               if ((builtChildren.length < 2) ||
@@ -207,55 +239,15 @@ class _M3CarouselState extends State<M3Carousel> {
           child: SizedBox(
             width: useWidth,
             height: useHeight,
-            child: Row(
-              children: builtChildren
-                  .map<Widget>((listItem) => InkWell(
-                        onTap: widget.childClick == null
-                            ? null
-                            : () {
-                                if (listItem.width ==
-                                    widget.trailingChildWidth) {
-                                  if (listItem.direction == 1) {
-                                    activeIndex++;
-                                    updateSlabs(false, 1);
-                                  } else {
-                                    activeIndex--;
-                                    updateSlabs(false, 0);
-                                  }
-                                  return;
-                                }
-                                widget.childClick!(
-                                    builtChildren.indexOf(listItem));
-                              },
-                        splashFactory: NoSplash.splashFactory,
-                        hoverColor: Colors.transparent,
-                        focusColor: Colors.transparent,
-                        child: Container(
-                          margin: EdgeInsets.only(
-                            right:
-                                double.parse(listItem.marginRight.toString()),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.all(
-                                Radius.circular(widget.borderRadius)),
-                            child: AnimatedContainer(
-                              duration: Duration(
-                                milliseconds: widget.slideAnimationDuration,
-                              ),
-                              width: listItem.width,
-                              height: useHeight,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  listItem.child ?? buildMainChild(listItem),
-                                  buildTitle(listItem),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ))
-                  .toList(),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: builtChildren.length,
+              physics: const NeverScrollableScrollPhysics(),
+              cacheExtent: widget.visible.toDouble(),
+              itemBuilder: (BuildContext context, int index) {
+                return _buildChild(
+                    builtChildren.safeGet(index) ?? M3CarouselChildData());
+              },
             ),
           ),
         );
@@ -263,7 +255,59 @@ class _M3CarouselState extends State<M3Carousel> {
     );
   }
 
+  InkWell _buildChild(M3CarouselChildData listItem) {
+    return InkWell(
+      onTap: widget.childClick == null
+          ? null
+          : () {
+              if (listItem.width == widget.trailingChildWidth) {
+                if (listItem.direction == 1) {
+                  activeIndex++;
+                  updateSlabs(false, 1);
+                } else {
+                  activeIndex--;
+                  updateSlabs(false, 0);
+                }
+                return;
+              }
+              widget.childClick!(builtChildren.indexOf(listItem));
+            },
+      splashFactory: NoSplash.splashFactory,
+      hoverColor: Colors.transparent,
+      focusColor: Colors.transparent,
+      child: Container(
+        margin: EdgeInsets.only(
+          right: double.parse(listItem.marginRight.toString()),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.all(Radius.circular(widget.borderRadius)),
+          child: AnimatedContainer(
+            duration: Duration(
+              milliseconds: widget.slideAnimationDuration,
+            ),
+            width: listItem.width,
+            height: useHeight,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                buildMainChild(listItem),
+                buildTitle(listItem),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget buildTitle(M3CarouselChildData listItem) {
+    final titleBuilder = widget.titleBuilder;
+    if (titleBuilder != null) {
+      return titleBuilder(
+              context, builtChildren.indexOf(listItem), activeIndex) ??
+          Container();
+    }
+
     final text = listItem.title;
     if (text == null) {
       return Container();
@@ -303,6 +347,14 @@ class _M3CarouselState extends State<M3Carousel> {
   }
 
   Widget buildMainChild(M3CarouselChildData listItem) {
+    final itemBuilder = widget.itemBuilder;
+    if (itemBuilder != null) {
+      final result = itemBuilder(context, builtChildren.indexOf(listItem));
+      if (result != null) {
+        return result;
+      }
+    }
+
     final imageURl = listItem.image;
     if (imageURl == null) {
       return Container(
