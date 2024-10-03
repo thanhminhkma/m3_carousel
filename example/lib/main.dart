@@ -70,7 +70,10 @@ class MyApp extends StatelessWidget {
             );
           },
           itemBuilder: (context, index, activeIndex) {
-            print("Image URL: $index");
+            if (index < activeIndex - 3 || index > activeIndex + 6) {
+              return Container();
+            }
+
             return buildMainChild(images[index % images.length]["image"]);
           },
           children: const [],
@@ -80,6 +83,7 @@ class MyApp extends StatelessWidget {
   }
 
   Widget? buildMainChild(String? imageURL) {
+    print("Image URL");
     if (imageURL == null) {
       return null;
     }
