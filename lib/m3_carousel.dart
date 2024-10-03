@@ -51,7 +51,7 @@ class M3Carousel extends StatefulWidget {
   final int titleFadeAnimationDuration;
   final double titleTextSize;
 
-  final NullableIndexedWidgetBuilder? itemBuilder;
+  final NullableTitleBuilder? itemBuilder;
   final NullableTitleBuilder? titleBuilder;
 
   final int totalSubCount;
@@ -133,8 +133,8 @@ class _M3CarouselState extends State<M3Carousel> {
       return setState(() {});
     }
     for (int a = 0; a < builtChildren.length; a++) {
-      builtChildren[a].width = 0.0;
-      builtChildren[a].marginRight = 0.0;
+      builtChildren[a].width = 2.0;
+      builtChildren[a].marginRight = 0;
       builtChildren[a].opacity = 0.0;
     }
 
@@ -241,7 +241,7 @@ class _M3CarouselState extends State<M3Carousel> {
             height: useHeight,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
-              itemCount: builtChildren.length,
+              itemCount: builtChildren.length * 10,
               physics: const NeverScrollableScrollPhysics(),
               cacheExtent: widget.visible.toDouble(),
               itemBuilder: (BuildContext context, int index) {
@@ -349,7 +349,7 @@ class _M3CarouselState extends State<M3Carousel> {
   Widget buildMainChild(M3CarouselChildData listItem) {
     final itemBuilder = widget.itemBuilder;
     if (itemBuilder != null) {
-      final result = itemBuilder(context, builtChildren.indexOf(listItem));
+      final result = itemBuilder(context, builtChildren.indexOf(listItem), activeIndex);
       if (result != null) {
         return result;
       }

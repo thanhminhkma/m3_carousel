@@ -37,8 +37,8 @@ class MyApp extends StatelessWidget {
           childClick: (int index) {
             print("Clicked $index");
           },
-          totalSubCount: images.length * 200,
-          initIndex: images.length * 100,
+          totalSubCount: images.length * 100,
+          initIndex: 0,
           titleBuilder: (context, index, activeIndex) {
             return Container(
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
@@ -69,15 +69,11 @@ class MyApp extends StatelessWidget {
               ),
             );
           },
-          itemBuilder: (context, index) {
+          itemBuilder: (context, index, activeIndex) {
+            print("Image URL: $index");
             return buildMainChild(images[index % images.length]["image"]);
           },
-          children: images
-              .map((e) => M3CarouselChildData(
-                    image: e["image"],
-                    title: e["title"],
-                  ))
-              .toList(),
+          children: const [],
         ),
       ),
     );
